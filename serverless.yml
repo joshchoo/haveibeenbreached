@@ -7,9 +7,7 @@ provider:
   runtime: go1.x
   lambdaHashingVersion: 20201221
   region: ap-southeast-1
-
-# you can overwrite defaults here
-#  stage: dev
+  stage: dev
 
 # you can add statements to the Lambda function's IAM Role here
 #  iamRoleStatements:
