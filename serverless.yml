@@ -37,18 +37,12 @@ package:
     - ./bin/**
 
 functions:
-  hello:
-    handler: bin/hello
+  createBreach:
+    handler: bin/createBreach
     events:
       - httpApi:
-          path: /hello
-          method: get
-  world:
-    handler: bin/world
-    events:
-      - httpApi:
-          path: /world
-          method: get
+          path: /api/v1/breaches
+          method: post
 #    The following are a few example events you can configure
 #    NOTE: Please make sure to change your handler code to work with those events
 #    Check the event documentation for details
