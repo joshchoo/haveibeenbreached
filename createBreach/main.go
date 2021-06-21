@@ -3,48 +3,77 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"strings"
+	"fmt"
+	"time"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 )
 
-// Response is of type APIGatewayProxyResponse since we're leveraging the
-// AWS Lambda Proxy Request functionality (default behavior)
-//
-// https://serverless.com/framework/docs/providers/aws/events/apigateway/#lambda-proxy-integration
 type Response events.APIGatewayProxyResponse
+
+type BreachEvent struct {
+	BreachName  string `json:"BreachName"`
+	Title       string `json:"Title"`
+	Domain      string `json:"Domain"`
+	Description string `json:"Description"`
+	BreachDate  string `json:"BreachDate"` // YYYY-MM-DD
+}
+
+type Breach struct {
+	BreachName  string
+	Title       string
+	Domain      string
+	Description string
+	BreachDate  time.Time
+}
 
 var sess = session.Must(session.NewSessionWithOptions(session.Options{
 	SharedConfigState: session.SharedConfigEnable,
 }))
-
-// Create the DynamoDB client
 var svc = dynamodb.New(sess)
+var tableName = "Breaches"
 
-func Handler(ctx context.Context) (Response, error) {
-	input := &dynamodb.ListTablesInput{}
-	result, err := svc.ListTables(input)
+func Handler(ctx context.Context, event BreachEvent) (Response, error) {
+	breachDate, err := time.Parse("2006-01-02", event.BreachDate)
 	if err != nil {
-		return Response{StatusCode: 500, Body: "Failed to list DynamoDB tables"}, err
+		return Response{StatusCode: 400, Body: fmt.Sprintf("Error parsing BreachDate: %s", err)}, err
 	}
 
-	tableNames := []string{}
-	for _, name := range result.TableNames {
-		tableNames = append(tableNames, *name)
+	newBreach := Breach{
+		BreachName:  event.BreachName,
+		Title:       event.Title,
+		Domain:      event.Domain,
+		Description: event.Description,
+		BreachDate:  breachDate,
+	}
+
+	attrVal, err := dynamodbattribute.MarshalMap(newBreach)
+	if err != nil {
+		return Response{StatusCode: 400, Body: fmt.Sprintf("Error marshalling new Breach: %s", err)}, err
+	}
+	input := &dynamodb.PutItemInput{
+		Item:      attrVal,
+		TableName: aws.String(tableName),
+	}
+	_, err = svc.PutItem(input)
+	if err != nil {
+		return Response{StatusCode: 400, Body: fmt.Sprintf("Error putting Breach: %s", err)}, err
 	}
 
 	body, err := json.Marshal(map[string]interface{}{
-		"message": strings.Join(tableNames, "\n"),
+		"message": fmt.Sprintf("Successfully added breach: %s", newBreach.BreachName),
 	})
 	if err != nil {
 		return Response{StatusCode: 400}, err
 	}
 
 	resp := Response{
-		StatusCode:      201,
+		StatusCode:      200,
 		IsBase64Encoded: false,
 		Body:            string(body),
 		Headers: map[string]string{
