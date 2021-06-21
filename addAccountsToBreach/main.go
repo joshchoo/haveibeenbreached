@@ -43,30 +43,25 @@ func Handler(ctx context.Context, event AddAccountEvent) (Response, error) {
 	accounts := event.Accounts
 	breachName := event.PathParameters.BreachName
 
-	email, err := NewEmail("john@doe.com")
+	accs, err := mapToAccount(accounts, breachName)
 	if err != nil {
-		return Response{StatusCode: 400, Body: fmt.Sprintf("Invalid account: %s", err)}, err
+		return Response{StatusCode: 400, Body: fmt.Sprintf("Invalid email: %s", err)}, err
 	}
 
-	newAccount := Account{
-		PK:       email.PartitionKey(),
-		SK:       email.SortKey(),
-		Type:     entityType,
-		Account:  "john@doe.com",
-		Breaches: []string{breachName},
-	}
-
-	attrVal, err := dynamodbattribute.MarshalMap(newAccount)
+	attrVals, err := marshalMapToAttributeValues(accs)
 	if err != nil {
 		return Response{StatusCode: 400, Body: fmt.Sprintf("Error marshalling new Account: %s", err)}, err
 	}
-	input := &dynamodb.PutItemInput{
-		Item:      attrVal,
-		TableName: aws.String(tableName),
-	}
-	_, err = svc.PutItem(input)
-	if err != nil {
-		return Response{StatusCode: 400, Body: fmt.Sprintf("Error adding Account to breach: %s", err)}, err
+
+	for _, attrVal := range attrVals {
+		input := &dynamodb.PutItemInput{
+			Item:      attrVal,
+			TableName: aws.String(tableName),
+		}
+		_, err = svc.PutItem(input)
+		if err != nil {
+			return Response{StatusCode: 400, Body: fmt.Sprintf("Error adding Account %+v to breach: %s", input, err)}, err
+		}
 	}
 
 	numAccounts := len(accounts)
@@ -93,6 +88,50 @@ func main() {
 	lambda.Start(Handler)
 }
 
+func mapToAccount(accounts []string, breachName string) ([]Account, error) {
+	accs := make([]Account, 0, len(accounts))
+	var err error
+
+	for _, account := range accounts {
+		email, emailErr := NewEmail(account)
+		if err != nil {
+			err = emailErr
+			break
+		}
+		newAccount := Account{
+			PK:       email.PartitionKey(),
+			SK:       email.SortKey(),
+			Type:     entityType,
+			Account:  email.Account(),
+			Breaches: []string{breachName},
+		}
+		accs = append(accs, newAccount)
+	}
+	if err != nil {
+		return []Account{}, err
+	}
+	return accs, nil
+}
+
+func marshalMapToAttributeValues(accounts []Account) ([]map[string]*dynamodb.AttributeValue, error) {
+	attrVals := make([]map[string]*dynamodb.AttributeValue, 0, len(accounts))
+	var err error
+
+	for _, account := range accounts {
+		attrVal, marshalErr := dynamodbattribute.MarshalMap(account)
+		if err != nil {
+			err = marshalErr
+			break
+		}
+		attrVals = append(attrVals, attrVal)
+	}
+
+	if err != nil {
+		return []map[string]*dynamodb.AttributeValue{}, err
+	}
+	return attrVals, nil
+}
+
 var emailRegex = regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+\\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
 
 type Email struct {
@@ -109,6 +148,10 @@ func NewEmail(emailStr string) (Email, error) {
 		Alias:  email[0],
 		Domain: email[1],
 	}, nil
+}
+
+func (e Email) Account() string {
+	return fmt.Sprintf("%s@%s", e.Alias, e.Domain)
 }
 
 func (e Email) PartitionKey() string {
