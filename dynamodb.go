@@ -8,6 +8,10 @@ import (
 
 var tableName = "Breaches"
 
+type DBItem interface {
+	isDBItem() bool
+}
+
 type Repo struct {
 	svc *dynamodb.DynamoDB
 }
@@ -16,7 +20,7 @@ func NewRepo(svc *dynamodb.DynamoDB) Repo {
 	return Repo{svc}
 }
 
-func (r Repo) PutItem(item interface{}) error {
+func (r Repo) PutItem(item DBItem) error {
 	attrVal, err := dynamodbattribute.MarshalMap(item)
 	if err != nil {
 		return nil

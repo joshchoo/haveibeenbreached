@@ -19,6 +19,10 @@ type BreachItem struct {
 	BreachDate  time.Time
 }
 
+func (b BreachItem) isDBItem() bool {
+	return true
+}
+
 /// Breach represents the breach domain model.
 type Breach struct {
 	BreachName  string
