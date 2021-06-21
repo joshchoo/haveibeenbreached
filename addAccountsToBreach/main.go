@@ -40,15 +40,20 @@ var tableName = "Breaches"
 var entityType = "Account"
 
 func Handler(ctx context.Context, event AddAccountEvent) (Response, error) {
-	accounts := event.Accounts
+	rawAccounts := event.Accounts
 	breachName := event.PathParameters.BreachName
 
-	accs, err := mapToAccount(accounts, breachName)
+	accounts, err := mapToAccount(rawAccounts)
 	if err != nil {
 		return Response{StatusCode: 400, Body: fmt.Sprintf("Invalid email: %s", err)}, err
 	}
 
-	attrVals, err := marshalMapToAttributeValues(accs)
+	accounts, err = setAccountBreaches(accounts, breachName)
+	if err != nil {
+		return Response{StatusCode: 400, Body: fmt.Sprintf("Invalid email: %s", err)}, err
+	}
+
+	attrVals, err := marshalMapToAttributeValues(accounts)
 	if err != nil {
 		return Response{StatusCode: 400, Body: fmt.Sprintf("Error marshalling new Account: %s", err)}, err
 	}
@@ -66,7 +71,7 @@ func Handler(ctx context.Context, event AddAccountEvent) (Response, error) {
 
 	numAccounts := len(accounts)
 	body, err := json.Marshal(map[string]interface{}{
-		"message": fmt.Sprintf("Successfully added %d accounts to the %s breach.", numAccounts, breachName),
+		"message": fmt.Sprintf("Successfully added/updated %d accounts to the %s breach.", numAccounts, breachName),
 	})
 	if err != nil {
 		return Response{StatusCode: 400}, err
@@ -88,7 +93,7 @@ func main() {
 	lambda.Start(Handler)
 }
 
-func mapToAccount(accounts []string, breachName string) ([]Account, error) {
+func mapToAccount(accounts []string) ([]Account, error) {
 	accs := make([]Account, 0, len(accounts))
 	var err error
 
@@ -103,9 +108,55 @@ func mapToAccount(accounts []string, breachName string) ([]Account, error) {
 			SK:       email.SortKey(),
 			Type:     entityType,
 			Account:  email.Account(),
-			Breaches: []string{breachName},
+			Breaches: make([]string, 0),
 		}
 		accs = append(accs, newAccount)
+	}
+	if err != nil {
+		return []Account{}, err
+	}
+	return accs, nil
+}
+
+func setAccountBreaches(accounts []Account, breachName string) ([]Account, error) {
+	accs := make([]Account, 0, len(accounts))
+	var err error
+
+	for _, account := range accounts {
+		input := &dynamodb.GetItemInput{
+			TableName: aws.String(tableName),
+			Key: map[string]*dynamodb.AttributeValue{
+				"PK": {
+					S: aws.String(account.PK),
+				},
+				"SK": {
+					S: aws.String(account.SK),
+				},
+			},
+		}
+		result, getItemErr := svc.GetItem(input)
+		if getItemErr != nil {
+			err = getItemErr
+			break
+		}
+		if result.Item != nil {
+			existingAcc := &Account{}
+			unmarshalErr := dynamodbattribute.UnmarshalMap(result.Item, existingAcc)
+			if unmarshalErr != nil {
+				err = unmarshalErr
+				break
+			}
+			var breaches []string
+			if contains(existingAcc.Breaches, breachName) {
+				breaches = existingAcc.Breaches
+			} else {
+				breaches = append(existingAcc.Breaches, breachName)
+			}
+			account.Breaches = breaches
+		} else {
+			account.Breaches = []string{breachName}
+		}
+		accs = append(accs, account)
 	}
 	if err != nil {
 		return []Account{}, err
@@ -160,4 +211,13 @@ func (e Email) PartitionKey() string {
 
 func (e Email) SortKey() string {
 	return fmt.Sprintf("EMAIL#%s", e.Alias)
+}
+
+func contains(arr []string, str string) bool {
+	for _, el := range arr {
+		if el == str {
+			return true
+		}
+	}
+	return false
 }
