@@ -43,6 +43,19 @@ var tableName = "Breaches"
 var entityType = "Breach"
 var timeLayout = "2006-01-02"
 
+func PutItem(item interface{}) error {
+	attrVal, err := dynamodbattribute.MarshalMap(item)
+	if err != nil {
+		return nil
+	}
+	input := &dynamodb.PutItemInput{
+		Item:      attrVal,
+		TableName: aws.String(tableName),
+	}
+	_, err = svc.PutItem(input)
+	return err
+}
+
 func Handler(ctx context.Context, event BreachEvent) (Response, error) {
 	breachDate, err := time.Parse(timeLayout, event.BreachDate)
 	if err != nil {
@@ -60,15 +73,7 @@ func Handler(ctx context.Context, event BreachEvent) (Response, error) {
 		BreachDate:  breachDate,
 	}
 
-	attrVal, err := dynamodbattribute.MarshalMap(newBreach)
-	if err != nil {
-		return Response{StatusCode: 400, Body: fmt.Sprintf("Error marshalling new Breach: %s", err)}, err
-	}
-	input := &dynamodb.PutItemInput{
-		Item:      attrVal,
-		TableName: aws.String(tableName),
-	}
-	_, err = svc.PutItem(input)
+	err = PutItem(newBreach)
 	if err != nil {
 		return Response{StatusCode: 400, Body: fmt.Sprintf("Error putting Breach: %s", err)}, err
 	}
