@@ -25,6 +25,8 @@ type BreachEvent struct {
 }
 
 type Breach struct {
+	PK          string
+	SK          string
 	BreachName  string
 	Title       string
 	Domain      string
@@ -45,6 +47,8 @@ func Handler(ctx context.Context, event BreachEvent) (Response, error) {
 	}
 
 	newBreach := Breach{
+		PK:          partitionKey(event.BreachName),
+		SK:          sortKey(event.BreachName),
 		BreachName:  event.BreachName,
 		Title:       event.Title,
 		Domain:      event.Domain,
@@ -86,4 +90,12 @@ func Handler(ctx context.Context, event BreachEvent) (Response, error) {
 
 func main() {
 	lambda.Start(Handler)
+}
+
+func partitionKey(key string) string {
+	return fmt.Sprintf("BREACH#%s", key)
+}
+
+func sortKey(key string) string {
+	return fmt.Sprintf("BREACH#%s", key)
 }
