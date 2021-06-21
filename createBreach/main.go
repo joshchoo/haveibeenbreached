@@ -17,11 +17,11 @@ import (
 type Response events.APIGatewayProxyResponse
 
 type BreachEvent struct {
-	BreachName  string `json:"BreachName"`
-	Title       string `json:"Title"`
-	Domain      string `json:"Domain"`
-	Description string `json:"Description"`
-	BreachDate  string `json:"BreachDate"` // YYYY-MM-DD
+	BreachName  string
+	Title       string
+	Domain      string
+	Description string
+	BreachDate  string // YYYY-MM-DD
 }
 
 type Breach struct {
@@ -41,9 +41,10 @@ var sess = session.Must(session.NewSessionWithOptions(session.Options{
 var svc = dynamodb.New(sess)
 var tableName = "Breaches"
 var entityType = "Breach"
+var timeLayout = "2006-01-02"
 
 func Handler(ctx context.Context, event BreachEvent) (Response, error) {
-	breachDate, err := time.Parse("2006-01-02", event.BreachDate)
+	breachDate, err := time.Parse(timeLayout, event.BreachDate)
 	if err != nil {
 		return Response{StatusCode: 400, Body: fmt.Sprintf("Error parsing BreachDate: %s", err)}, err
 	}
