@@ -20,6 +20,41 @@ func NewRepo(svc *dynamodb.DynamoDB) Repo {
 	return Repo{svc}
 }
 
+func (r Repo) GetAccount(partitionKey, sortKey string) (*AccountItem, error) {
+	account := AccountItem{}
+	found, err := r.getItem(partitionKey, sortKey, &account)
+	if err != nil {
+		return nil, err
+	}
+	if !found {
+		return nil, nil
+	}
+	return &account, nil
+}
+
+func (r Repo) getItem(partitionKey string, sortKey string, output interface{}) (found bool, err error) {
+	input := &dynamodb.GetItemInput{
+		TableName: aws.String(tableName),
+		Key: map[string]*dynamodb.AttributeValue{
+			"PK": {
+				S: aws.String(partitionKey),
+			},
+			"SK": {
+				S: aws.String(sortKey),
+			},
+		},
+	}
+	result, err := r.svc.GetItem(input)
+	if err != nil {
+		return false, err
+	}
+	if result.Item != nil {
+		err := dynamodbattribute.UnmarshalMap(result.Item, output)
+		return true, err
+	}
+	return false, nil
+}
+
 func (r Repo) PutItem(item DBItem) error {
 	attrVal, err := dynamodbattribute.MarshalMap(item)
 	if err != nil {
