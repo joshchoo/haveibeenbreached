@@ -43,7 +43,18 @@ var tableName = "Breaches"
 var entityType = "Breach"
 var timeLayout = "2006-01-02"
 
-func PutItem(item interface{}) error {
+var repo = NewRepo(svc)
+var createBreachHandler = makeCreateBreachHandler(repo)
+
+type Repo struct {
+	svc *dynamodb.DynamoDB
+}
+
+func NewRepo(svc *dynamodb.DynamoDB) Repo {
+	return Repo{svc}
+}
+
+func (r Repo) PutItem(item interface{}) error {
 	attrVal, err := dynamodbattribute.MarshalMap(item)
 	if err != nil {
 		return nil
@@ -52,53 +63,55 @@ func PutItem(item interface{}) error {
 		Item:      attrVal,
 		TableName: aws.String(tableName),
 	}
-	_, err = svc.PutItem(input)
+	_, err = r.svc.PutItem(input)
 	return err
 }
 
-func Handler(ctx context.Context, event BreachEvent) (Response, error) {
-	breachDate, err := time.Parse(timeLayout, event.BreachDate)
-	if err != nil {
-		return Response{StatusCode: 400, Body: fmt.Sprintf("Error parsing BreachDate: %s", err)}, err
-	}
+func makeCreateBreachHandler(repo Repo) func(ctx context.Context, event BreachEvent) (Response, error) {
+	return func(ctx context.Context, event BreachEvent) (Response, error) {
+		breachDate, err := time.Parse(timeLayout, event.BreachDate)
+		if err != nil {
+			return Response{StatusCode: 400, Body: fmt.Sprintf("Error parsing BreachDate: %s", err)}, err
+		}
 
-	newBreach := Breach{
-		PK:          partitionKey(event.BreachName),
-		SK:          sortKey(event.BreachName),
-		Type:        entityType,
-		BreachName:  event.BreachName,
-		Title:       event.Title,
-		Domain:      event.Domain,
-		Description: event.Description,
-		BreachDate:  breachDate,
-	}
+		newBreach := Breach{
+			PK:          partitionKey(event.BreachName),
+			SK:          sortKey(event.BreachName),
+			Type:        entityType,
+			BreachName:  event.BreachName,
+			Title:       event.Title,
+			Domain:      event.Domain,
+			Description: event.Description,
+			BreachDate:  breachDate,
+		}
 
-	err = PutItem(newBreach)
-	if err != nil {
-		return Response{StatusCode: 400, Body: fmt.Sprintf("Error putting Breach: %s", err)}, err
-	}
+		err = repo.PutItem(newBreach)
+		if err != nil {
+			return Response{StatusCode: 400, Body: fmt.Sprintf("Error putting Breach: %s", err)}, err
+		}
 
-	body, err := json.Marshal(map[string]interface{}{
-		"message": fmt.Sprintf("Successfully added breach: %s", newBreach.BreachName),
-	})
-	if err != nil {
-		return Response{StatusCode: 400}, err
-	}
+		body, err := json.Marshal(map[string]interface{}{
+			"message": fmt.Sprintf("Successfully added breach: %s", newBreach.BreachName),
+		})
+		if err != nil {
+			return Response{StatusCode: 400}, err
+		}
 
-	resp := Response{
-		StatusCode:      200,
-		IsBase64Encoded: false,
-		Body:            string(body),
-		Headers: map[string]string{
-			"Content-Type": "application/json",
-		},
-	}
+		resp := Response{
+			StatusCode:      200,
+			IsBase64Encoded: false,
+			Body:            string(body),
+			Headers: map[string]string{
+				"Content-Type": "application/json",
+			},
+		}
 
-	return resp, nil
+		return resp, nil
+	}
 }
 
 func main() {
-	lambda.Start(Handler)
+	lambda.Start(createBreachHandler)
 }
 
 func partitionKey(key string) string {
