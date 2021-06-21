@@ -27,6 +27,7 @@ type BreachEvent struct {
 type Breach struct {
 	PK          string
 	SK          string
+	Type        string
 	BreachName  string
 	Title       string
 	Domain      string
@@ -39,6 +40,7 @@ var sess = session.Must(session.NewSessionWithOptions(session.Options{
 }))
 var svc = dynamodb.New(sess)
 var tableName = "Breaches"
+var entityType = "Breach"
 
 func Handler(ctx context.Context, event BreachEvent) (Response, error) {
 	breachDate, err := time.Parse("2006-01-02", event.BreachDate)
@@ -49,6 +51,7 @@ func Handler(ctx context.Context, event BreachEvent) (Response, error) {
 	newBreach := Breach{
 		PK:          partitionKey(event.BreachName),
 		SK:          sortKey(event.BreachName),
+		Type:        entityType,
 		BreachName:  event.BreachName,
 		Title:       event.Title,
 		Domain:      event.Domain,
