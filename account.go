@@ -8,6 +8,12 @@ import (
 
 var accountEntityType = "Account"
 
+type Username interface {
+	String() string
+	PartitionKey() string
+	SortKey() string
+}
+
 type AccountItem struct {
 	PK       string
 	SK       string
@@ -20,15 +26,28 @@ func (a AccountItem) isDBItem() bool {
 	return true
 }
 
+func (a AccountItem) GetUsername() (Username, error) {
+	username, err := NewEmail(a.Username)
+	if err != nil {
+		return nil, err
+	}
+	return username, nil
+}
+
+func (a AccountItem) ToAccount() (Account, error) {
+	username, err := a.GetUsername()
+	if err != nil {
+		return Account{}, err
+	}
+	return Account{
+		Username: username,
+		Breaches: a.Breaches,
+	}, nil
+}
+
 type Account struct {
 	Username Username
 	Breaches []string
-}
-
-type Username interface {
-	String() string
-	PartitionKey() string
-	SortKey() string
 }
 
 func (a Account) Item() AccountItem {

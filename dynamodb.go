@@ -20,14 +20,18 @@ func NewRepo(svc *dynamodb.DynamoDB) Repo {
 	return Repo{svc}
 }
 
-func (r Repo) GetAccount(partitionKey, sortKey string) (*AccountItem, error) {
-	account := AccountItem{}
-	found, err := r.getItem(partitionKey, sortKey, &account)
+func (r Repo) GetAccount(partitionKey, sortKey string) (*Account, error) {
+	accountItem := AccountItem{}
+	found, err := r.getItem(partitionKey, sortKey, &accountItem)
 	if err != nil {
 		return nil, err
 	}
 	if !found {
 		return nil, nil
+	}
+	account, err := accountItem.ToAccount()
+	if err != nil {
+		return nil, err
 	}
 	return &account, nil
 }
