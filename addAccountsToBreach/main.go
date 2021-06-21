@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"regexp"
+	"strings"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -41,9 +43,14 @@ func Handler(ctx context.Context, event AddAccountEvent) (Response, error) {
 	accounts := event.Accounts
 	breachName := event.PathParameters.BreachName
 
+	email, err := NewEmail("john@doe.com")
+	if err != nil {
+		return Response{StatusCode: 400, Body: fmt.Sprintf("Invalid account: %s", err)}, err
+	}
+
 	newAccount := Account{
-		PK:       partitionKey("@doe.com"),
-		SK:       sortKey("john"),
+		PK:       email.PartitionKey(),
+		SK:       email.SortKey(),
 		Type:     entityType,
 		Account:  "john@doe.com",
 		Breaches: []string{breachName},
@@ -86,10 +93,28 @@ func main() {
 	lambda.Start(Handler)
 }
 
-func partitionKey(key string) string {
-	return fmt.Sprintf("EMAIL#%s", key)
+var emailRegex = regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+\\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
+
+type Email struct {
+	Domain string
+	Alias  string
 }
 
-func sortKey(key string) string {
-	return fmt.Sprintf("EMAIL#%s", key)
+func NewEmail(emailStr string) (Email, error) {
+	if !emailRegex.MatchString(emailStr) {
+		return Email{}, fmt.Errorf("not a valid email address: %s", emailStr)
+	}
+	email := strings.Split(emailStr, "@")
+	return Email{
+		Alias:  email[0],
+		Domain: email[1],
+	}, nil
+}
+
+func (e Email) PartitionKey() string {
+	return fmt.Sprintf("EMAIL#%s", e.Domain)
+}
+
+func (e Email) SortKey() string {
+	return fmt.Sprintf("EMAIL#%s", e.Alias)
 }
