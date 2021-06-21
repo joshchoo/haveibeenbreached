@@ -28,64 +28,56 @@ var sess = session.Must(session.NewSessionWithOptions(session.Options{
 }))
 var svc = dynamodb.New(sess)
 var tableName = "Breaches"
+var repo = haveibeenbreached.NewRepo(svc)
+var addAccountsToBreachHandler = makeAddAccountsToBreachHandler(repo)
 
-func Handler(ctx context.Context, event AddAccountEvent) (Response, error) {
-	rawAccounts := event.Accounts
-	breachName := event.PathParameters.BreachName
+func makeAddAccountsToBreachHandler(repo haveibeenbreached.Repo) func(ctx context.Context, event AddAccountEvent) (Response, error) {
+	return func(ctx context.Context, event AddAccountEvent) (Response, error) {
+		rawAccounts := event.Accounts
+		breachName := event.PathParameters.BreachName
 
-	accounts, err := mapToAccount(rawAccounts)
-	if err != nil {
-		return Response{StatusCode: 400, Body: fmt.Sprintf("Invalid email: %s", err)}, err
-	}
-
-	accounts, err = setAccountBreaches(accounts, breachName)
-	if err != nil {
-		return Response{StatusCode: 400, Body: fmt.Sprintf("Invalid email: %s", err)}, err
-	}
-
-	items := make([]haveibeenbreached.DBItem, 0, len(accounts))
-	for _, a := range accounts {
-		items = append(items, a.Item())
-	}
-
-	attrVals, err := marshalMapToAttributeValues(items)
-	if err != nil {
-		return Response{StatusCode: 400, Body: fmt.Sprintf("Error marshalling new Account: %s", err)}, err
-	}
-
-	for _, attrVal := range attrVals {
-		input := &dynamodb.PutItemInput{
-			Item:      attrVal,
-			TableName: aws.String(tableName),
-		}
-		_, err = svc.PutItem(input)
+		accounts, err := mapToAccount(rawAccounts)
 		if err != nil {
-			return Response{StatusCode: 400, Body: fmt.Sprintf("Error adding Account %+v to breach: %s", input, err)}, err
+			return Response{StatusCode: 400, Body: fmt.Sprintf("Invalid email: %s", err)}, err
 		}
-	}
 
-	numAccounts := len(accounts)
-	body, err := json.Marshal(map[string]interface{}{
-		"message": fmt.Sprintf("Successfully added/updated %d accounts to the %s breach.", numAccounts, breachName),
-	})
-	if err != nil {
-		return Response{StatusCode: 400}, err
-	}
+		accounts, err = setAccountBreaches(accounts, breachName)
+		if err != nil {
+			return Response{StatusCode: 400, Body: fmt.Sprintf("Invalid email: %s", err)}, err
+		}
 
-	resp := Response{
-		StatusCode:      200,
-		IsBase64Encoded: false,
-		Body:            string(body),
-		Headers: map[string]string{
-			"Content-Type": "application/json",
-		},
-	}
+		items := make([]haveibeenbreached.DBItem, 0, len(accounts))
+		for _, a := range accounts {
+			items = append(items, a.Item())
+		}
 
-	return resp, nil
+		if err = repo.PutItems(items); err != nil {
+			return Response{StatusCode: 400, Body: fmt.Sprintf("Error adding accounts to breach: %s", err)}, err
+		}
+
+		numAccounts := len(accounts)
+		body, err := json.Marshal(map[string]interface{}{
+			"message": fmt.Sprintf("Successfully added/updated %d accounts to the %s breach.", numAccounts, breachName),
+		})
+		if err != nil {
+			return Response{StatusCode: 400}, err
+		}
+
+		resp := Response{
+			StatusCode:      200,
+			IsBase64Encoded: false,
+			Body:            string(body),
+			Headers: map[string]string{
+				"Content-Type": "application/json",
+			},
+		}
+
+		return resp, nil
+	}
 }
 
 func main() {
-	lambda.Start(Handler)
+	lambda.Start(addAccountsToBreachHandler)
 }
 
 func mapToAccount(accounts []string) ([]haveibeenbreached.Account, error) {
@@ -155,25 +147,6 @@ func setAccountBreaches(accounts []haveibeenbreached.Account, breachName string)
 		return []haveibeenbreached.Account{}, err
 	}
 	return accs, nil
-}
-
-func marshalMapToAttributeValues(items []haveibeenbreached.DBItem) ([]map[string]*dynamodb.AttributeValue, error) {
-	attrVals := make([]map[string]*dynamodb.AttributeValue, 0, len(items))
-	var err error
-
-	for _, item := range items {
-		attrVal, marshalErr := dynamodbattribute.MarshalMap(item)
-		if err != nil {
-			err = marshalErr
-			break
-		}
-		attrVals = append(attrVals, attrVal)
-	}
-
-	if err != nil {
-		return []map[string]*dynamodb.AttributeValue{}, err
-	}
-	return attrVals, nil
 }
 
 func contains(arr []string, str string) bool {

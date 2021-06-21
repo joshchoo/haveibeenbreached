@@ -23,7 +23,7 @@ func NewRepo(svc *dynamodb.DynamoDB) Repo {
 func (r Repo) PutItem(item DBItem) error {
 	attrVal, err := dynamodbattribute.MarshalMap(item)
 	if err != nil {
-		return nil
+		return err
 	}
 	input := &dynamodb.PutItemInput{
 		Item:      attrVal,
@@ -31,4 +31,13 @@ func (r Repo) PutItem(item DBItem) error {
 	}
 	_, err = r.svc.PutItem(input)
 	return err
+}
+
+func (r Repo) PutItems(items []DBItem) error {
+	for _, item := range items {
+		if err := r.PutItem(item); err != nil {
+			return err
+		}
+	}
+	return nil
 }
