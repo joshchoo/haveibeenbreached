@@ -35,7 +35,7 @@ func makeFindAccountHandler(repo haveibeenbreached.Repo) func(ctx context.Contex
 	return func(ctx context.Context, event FindAccountEvent) (Response, error) {
 		rawUsername := event.PathParameters.Username
 
-		username, err := haveibeenbreached.NewEmail(rawUsername)
+		username, err := haveibeenbreached.NewEmailAccount(rawUsername)
 		if err != nil {
 			return Response{StatusCode: 400, Body: fmt.Sprintf("Invalid username: %s", rawUsername)}, err
 		}

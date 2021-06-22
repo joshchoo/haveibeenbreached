@@ -82,7 +82,7 @@ func main() {
 func parseAccounts(accounts []string) ([]haveibeenbreached.Account, error) {
 	accs := make([]haveibeenbreached.Account, 0, len(accounts))
 	for _, account := range accounts {
-		email, err := haveibeenbreached.NewEmail(account)
+		email, err := haveibeenbreached.NewEmailAccount(account)
 		if err != nil {
 			return []haveibeenbreached.Account{}, err
 		}

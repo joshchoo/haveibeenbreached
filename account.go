@@ -26,7 +26,7 @@ func (a AccountItem) isDBItem() bool {
 }
 
 func (a AccountItem) GetUsername() (Username, error) {
-	username, err := NewEmail(a.Username)
+	username, err := NewEmailAccount(a.Username)
 	if err != nil {
 		return nil, err
 	}
@@ -63,30 +63,30 @@ func (a Account) ToItem() DBItem {
 	return a.Item()
 }
 
-type Email struct {
+type EmailAccount struct {
 	Domain string
 	Alias  string
 }
 
-func NewEmail(emailStr string) (Email, error) {
+func NewEmailAccount(emailStr string) (EmailAccount, error) {
 	if !IsValidEmail(emailStr) {
-		return Email{}, fmt.Errorf("not a valid email address: %s", emailStr)
+		return EmailAccount{}, fmt.Errorf("not a valid email address: %s", emailStr)
 	}
 	email := strings.Split(emailStr, "@")
-	return Email{
+	return EmailAccount{
 		Alias:  email[0],
 		Domain: email[1],
 	}, nil
 }
 
-func (e Email) String() string {
+func (e EmailAccount) String() string {
 	return fmt.Sprintf("%s@%s", e.Alias, e.Domain)
 }
 
-func (e Email) PartitionKey() string {
+func (e EmailAccount) PartitionKey() string {
 	return fmt.Sprintf("EMAIL#%s", e.Domain)
 }
 
-func (e Email) SortKey() string {
+func (e EmailAccount) SortKey() string {
 	return fmt.Sprintf("EMAIL#%s", e.Alias)
 }
