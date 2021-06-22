@@ -2,7 +2,6 @@ package haveibeenbreached
 
 import (
 	"fmt"
-	"regexp"
 	"strings"
 )
 
@@ -64,15 +63,13 @@ func (a Account) ToItem() DBItem {
 	return a.Item()
 }
 
-var emailRegex = regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+\\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
-
 type Email struct {
 	Domain string
 	Alias  string
 }
 
 func NewEmail(emailStr string) (Email, error) {
-	if !emailRegex.MatchString(emailStr) {
+	if !IsValidEmail(emailStr) {
 		return Email{}, fmt.Errorf("not a valid email address: %s", emailStr)
 	}
 	email := strings.Split(emailStr, "@")
