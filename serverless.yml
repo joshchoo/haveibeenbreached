@@ -42,6 +42,12 @@ functions:
       - httpApi:
           path: /api/v1/breaches/{BreachName}
           method: post
+  findAccount:
+    handler: bin/findAccount
+    events:
+      - httpApi:
+          path: /api/v1/breachedaccounts/{Username}
+          method: get
 #    The following are a few example events you can configure
 #    NOTE: Please make sure to change your handler code to work with those events
 #    Check the event documentation for details
