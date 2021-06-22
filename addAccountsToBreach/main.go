@@ -33,6 +33,14 @@ func makeAddAccountsToBreachHandler(repo haveibeenbreached.Repo) func(ctx contex
 		rawAccounts := event.Accounts
 		breachName := event.PathParameters.BreachName
 
+		breach, err := repo.GetBreach(breachName)
+		if err != nil {
+			return Response{StatusCode: 400, Body: fmt.Sprintf("Error occurred while fetching breach: %s", err)}, err
+		}
+		if breach == nil {
+			return Response{StatusCode: 400, Body: fmt.Sprintf("Cannot add accounts to non-existent breach: %s", breachName)}, nil
+		}
+
 		accounts, err := mapToAccount(rawAccounts)
 		if err != nil {
 			return Response{StatusCode: 400, Body: fmt.Sprintf("Invalid email: %s", err)}, err
@@ -93,8 +101,7 @@ func mapToAccount(accounts []string) ([]haveibeenbreached.Account, error) {
 func setAccountBreaches(accounts []haveibeenbreached.Account, breachName string) ([]haveibeenbreached.Account, error) {
 	accs := make([]haveibeenbreached.Account, 0, len(accounts))
 	for _, account := range accounts {
-		accountItem := account.Item()
-		foundAccount, err := repo.GetAccount(accountItem.PK, accountItem.SK)
+		foundAccount, err := repo.GetAccount(account.Username)
 		if err != nil {
 			return []haveibeenbreached.Account{}, err
 		}

@@ -23,6 +23,16 @@ func (b BreachItem) isDBItem() bool {
 	return true
 }
 
+func (b BreachItem) ToBreach() Breach {
+	return Breach{
+		BreachName:  b.BreachName,
+		Title:       b.Title,
+		Domain:      b.Domain,
+		Description: b.Description,
+		BreachDate:  b.BreachDate,
+	}
+}
+
 /// Breach represents the breach domain model.
 type Breach struct {
 	BreachName  string
@@ -33,11 +43,11 @@ type Breach struct {
 }
 
 func (b Breach) PartitionKey() string {
-	return fmt.Sprintf("BREACH#%s", b.BreachName)
+	return BreachPartitionKey(b.BreachName)
 }
 
 func (b Breach) SortKey() string {
-	return fmt.Sprintf("BREACH#%s", b.BreachName)
+	return BreachSortKey(b.BreachName)
 }
 
 func (b Breach) Item() BreachItem {
@@ -51,4 +61,12 @@ func (b Breach) Item() BreachItem {
 		Description: b.Description,
 		BreachDate:  b.BreachDate,
 	}
+}
+
+func BreachPartitionKey(breachName string) string {
+	return fmt.Sprintf("BREACH#%s", breachName)
+}
+
+func BreachSortKey(breachName string) string {
+	return fmt.Sprintf("BREACH#%s", breachName)
 }

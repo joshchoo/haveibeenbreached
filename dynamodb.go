@@ -20,9 +20,11 @@ func NewRepo(svc *dynamodb.DynamoDB) Repo {
 	return Repo{svc}
 }
 
-func (r Repo) GetAccount(partitionKey, sortKey string) (*Account, error) {
+func (r Repo) GetAccount(username Username) (*Account, error) {
+	pk := username.PartitionKey()
+	sk := username.SortKey()
 	accountItem := AccountItem{}
-	found, err := r.getItem(partitionKey, sortKey, &accountItem)
+	found, err := r.getItem(pk, sk, &accountItem)
 	if err != nil {
 		return nil, err
 	}
@@ -34,6 +36,21 @@ func (r Repo) GetAccount(partitionKey, sortKey string) (*Account, error) {
 		return nil, err
 	}
 	return &account, nil
+}
+
+func (r Repo) GetBreach(breachName string) (*Breach, error) {
+	pk := BreachPartitionKey(breachName)
+	sk := BreachSortKey(breachName)
+	breachItem := BreachItem{}
+	found, err := r.getItem(pk, sk, &breachItem)
+	if err != nil {
+		return nil, err
+	}
+	if !found {
+		return nil, nil
+	}
+	breach := breachItem.ToBreach()
+	return &breach, nil
 }
 
 func (r Repo) getItem(partitionKey string, sortKey string, output interface{}) (found bool, err error) {
