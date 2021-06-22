@@ -48,7 +48,7 @@ func makeAddAccountsToBreachHandler(repo haveibeenbreached.Repo) func(ctx contex
 
 		accounts, err = setAccountBreaches(accounts, breachName)
 		if err != nil {
-			return Response{StatusCode: 400, Body: fmt.Sprintf("Invalid email: %s", err)}, err
+			return Response{StatusCode: 400, Body: fmt.Sprintf("Error setting breaches on account: %s", err)}, err
 		}
 
 		items := make([]haveibeenbreached.DBItem, 0, len(accounts))
