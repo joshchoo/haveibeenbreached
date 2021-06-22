@@ -51,7 +51,7 @@ func makeCreateBreachHandler(repo haveibeenbreached.Repo) func(ctx context.Conte
 			BreachDate:  breachDate,
 		}
 
-		if err = repo.PutItem(breach.Item()); err != nil {
+		if err = repo.PutItem(breach); err != nil {
 			return Response{StatusCode: 400, Body: fmt.Sprintf("Error putting Breach: %s", err)}, err
 		}
 

@@ -60,6 +60,10 @@ func (a Account) Item() AccountItem {
 	}
 }
 
+func (a Account) ToItem() DBItem {
+	return a.Item()
+}
+
 var emailRegex = regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+\\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
 
 type Email struct {

@@ -41,7 +41,7 @@ func makeAddAccountsToBreachHandler(repo haveibeenbreached.Repo) func(ctx contex
 			return Response{StatusCode: 400, Body: fmt.Sprintf("Cannot add accounts to non-existent breach: %s", breachName)}, nil
 		}
 
-		accounts, err := mapToAccount(rawAccounts)
+		accounts, err := parseAccounts(rawAccounts)
 		if err != nil {
 			return Response{StatusCode: 400, Body: fmt.Sprintf("Invalid email: %s", err)}, err
 		}
@@ -51,17 +51,14 @@ func makeAddAccountsToBreachHandler(repo haveibeenbreached.Repo) func(ctx contex
 			return Response{StatusCode: 400, Body: fmt.Sprintf("Error setting breaches on account: %s", err)}, err
 		}
 
-		items := make([]haveibeenbreached.DBItem, 0, len(accounts))
-		for _, a := range accounts {
-			items = append(items, a.Item())
-		}
+		items := mapAccountToItemable(accounts)
 
 		if err = repo.PutItems(items); err != nil {
 			return Response{StatusCode: 400, Body: fmt.Sprintf("Error adding accounts to breach: %s", err)}, err
 		}
 
 		body, err := json.Marshal(map[string]interface{}{
-			"message": fmt.Sprintf("Successfully added/updated %d accounts to the %s breach.", len(items), breachName),
+			"message": fmt.Sprintf("Successfully added/updated %d accounts to the %s breach.", len(accounts), breachName),
 		})
 		if err != nil {
 			return Response{StatusCode: 400}, err
@@ -82,7 +79,7 @@ func main() {
 	lambda.Start(addAccountsToBreachHandler)
 }
 
-func mapToAccount(accounts []string) ([]haveibeenbreached.Account, error) {
+func parseAccounts(accounts []string) ([]haveibeenbreached.Account, error) {
 	accs := make([]haveibeenbreached.Account, 0, len(accounts))
 	for _, account := range accounts {
 		email, err := haveibeenbreached.NewEmail(account)
@@ -119,6 +116,14 @@ func setAccountBreaches(accounts []haveibeenbreached.Account, breachName string)
 		accs = append(accs, account)
 	}
 	return accs, nil
+}
+
+func mapAccountToItemable(accounts []haveibeenbreached.Account) []haveibeenbreached.Itemable {
+	items := make([]haveibeenbreached.Itemable, 0, len(accounts))
+	for _, a := range accounts {
+		items = append(items, a)
+	}
+	return items
 }
 
 func contains(arr []string, str string) bool {

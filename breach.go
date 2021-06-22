@@ -63,6 +63,10 @@ func (b Breach) Item() BreachItem {
 	}
 }
 
+func (b Breach) ToItem() DBItem {
+	return b.Item()
+}
+
 func BreachPartitionKey(breachName string) string {
 	return fmt.Sprintf("BREACH#%s", breachName)
 }

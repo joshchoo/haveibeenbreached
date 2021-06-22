@@ -12,6 +12,10 @@ type DBItem interface {
 	isDBItem() bool
 }
 
+type Itemable interface {
+	ToItem() DBItem
+}
+
 type Repo struct {
 	svc *dynamodb.DynamoDB
 }
@@ -76,8 +80,8 @@ func (r Repo) getItem(partitionKey string, sortKey string, output interface{}) (
 	return false, nil
 }
 
-func (r Repo) PutItem(item DBItem) error {
-	attrVal, err := dynamodbattribute.MarshalMap(item)
+func (r Repo) PutItem(itemable Itemable) error {
+	attrVal, err := dynamodbattribute.MarshalMap(itemable.ToItem())
 	if err != nil {
 		return err
 	}
@@ -89,7 +93,7 @@ func (r Repo) PutItem(item DBItem) error {
 	return err
 }
 
-func (r Repo) PutItems(items []DBItem) error {
+func (r Repo) PutItems(items []Itemable) error {
 	for _, item := range items {
 		if err := r.PutItem(item); err != nil {
 			return err
