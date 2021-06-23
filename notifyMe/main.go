@@ -9,6 +9,7 @@ import (
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/joshuous/haveibeenbreached"
 )
 
@@ -28,22 +29,31 @@ var sess = session.Must(session.NewSessionWithOptions(session.Options{
 	SharedConfigState: session.SharedConfigEnable,
 }))
 var db = dynamodb.New(sess)
-var repo = haveibeenbreached.NewRepo(db)
-var notifyMeHandler = makeNotifyMeHandler(repo)
+var r = haveibeenbreached.NewRepo(db)
+var sqsQueue = sqs.New(sess)
+var mq = haveibeenbreached.NewMessageQueue(sqsQueue)
+var notifyMeHandler = makeNotifyMeHandler(r, mq)
+var subscriptionsQueueName = "subscriptions"
 
 func main() {
 	lambda.Start(notifyMeHandler)
 }
 
-func makeNotifyMeHandler(repo haveibeenbreached.Repo) func(ctx context.Context, event NotifyMeEvent) (Response, error) {
+func makeNotifyMeHandler(repo haveibeenbreached.Repo, queue haveibeenbreached.MessageQueue) func(ctx context.Context, event NotifyMeEvent) (Response, error) {
 	return func(ctx context.Context, event NotifyMeEvent) (Response, error) {
 		rawEmail := event.Email
-		_, err := haveibeenbreached.NewSubscriber(rawEmail)
+		subscriber, err := haveibeenbreached.NewSubscriber(rawEmail)
 		if err != nil {
 			return Response{StatusCode: 400, Body: fmt.Sprintf("Invalid email: %s", rawEmail)}, err
 		}
 
-		// TODO: add to SQS
+		err = queue.SendMessage(haveibeenbreached.SendMessageInput{
+			MessageBody: subscriber.Email,
+			QueueName:   subscriptionsQueueName,
+		})
+		if err != nil {
+			return Response{StatusCode: 400}, err
+		}
 
 		body, err := json.Marshal(map[string]interface{}{
 			"message": "Processing breach notification subscription.",

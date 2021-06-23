@@ -18,6 +18,9 @@ provider:
             - "dynamodb:ListTables"
             - "dynamodb:GetItem"
             - "dynamodb:PutItem"
+            - "sqs:ListQueues"
+            - "sqs:GetQueueUrl"
+            - "sqs:SendMessage"
           Resource: "*"
 
 # you can define service wide environment variables here
