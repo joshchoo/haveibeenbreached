@@ -17,11 +17,11 @@ type Itemable interface {
 }
 
 type Repo struct {
-	svc *dynamodb.DynamoDB
+	db *dynamodb.DynamoDB
 }
 
-func NewRepo(svc *dynamodb.DynamoDB) Repo {
-	return Repo{svc}
+func NewRepo(db *dynamodb.DynamoDB) Repo {
+	return Repo{db}
 }
 
 func (r Repo) GetAccount(username Username) (*Account, error) {
@@ -69,7 +69,7 @@ func (r Repo) getItem(partitionKey string, sortKey string, output interface{}) (
 			},
 		},
 	}
-	result, err := r.svc.GetItem(input)
+	result, err := r.db.GetItem(input)
 	if err != nil {
 		return false, err
 	}
@@ -89,7 +89,7 @@ func (r Repo) PutItem(itemable Itemable) error {
 		Item:      attrVal,
 		TableName: aws.String(tableName),
 	}
-	_, err = r.svc.PutItem(input)
+	_, err = r.db.PutItem(input)
 	return err
 }
 

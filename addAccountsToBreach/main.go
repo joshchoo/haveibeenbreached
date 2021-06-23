@@ -24,8 +24,8 @@ type AddAccountEvent struct {
 var sess = session.Must(session.NewSessionWithOptions(session.Options{
 	SharedConfigState: session.SharedConfigEnable,
 }))
-var svc = dynamodb.New(sess)
-var repo = haveibeenbreached.NewRepo(svc)
+var db = dynamodb.New(sess)
+var repo = haveibeenbreached.NewRepo(db)
 var addAccountsToBreachHandler = makeAddAccountsToBreachHandler(repo)
 
 func makeAddAccountsToBreachHandler(repo haveibeenbreached.Repo) func(ctx context.Context, event AddAccountEvent) (Response, error) {

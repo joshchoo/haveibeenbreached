@@ -27,8 +27,8 @@ type NotifyMeEvent struct {
 var sess = session.Must(session.NewSessionWithOptions(session.Options{
 	SharedConfigState: session.SharedConfigEnable,
 }))
-var svc = dynamodb.New(sess)
-var repo = haveibeenbreached.NewRepo(svc)
+var db = dynamodb.New(sess)
+var repo = haveibeenbreached.NewRepo(db)
 var notifyMeHandler = makeNotifyMeHandler(repo)
 
 func main() {
