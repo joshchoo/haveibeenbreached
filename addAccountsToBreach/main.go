@@ -46,6 +46,13 @@ func makeAddAccountsToBreachHandler(repo haveibeenbreached.Repo) func(ctx contex
 			return Response{StatusCode: 400, Body: fmt.Sprintf("Invalid email: %s", err)}, err
 		}
 
+		// Better alternative: put all breach accounts in S3, and store reference to the blob in DynamoDB. DynamoDB has item size limit of 400KB.
+		accountsString := toAccountString(accounts)
+		br := breach.AddAccounts(accountsString)
+		if err = repo.PutItem(br); err != nil {
+			return Response{StatusCode: 400, Body: "Error updating breach accounts for breach."}, err
+		}
+
 		accounts, err = setAccountBreaches(accounts, breachName)
 		if err != nil {
 			return Response{StatusCode: 400, Body: fmt.Sprintf("Error setting breaches on account: %s", err)}, err
@@ -93,6 +100,14 @@ func parseAccounts(accounts []string) ([]haveibeenbreached.Account, error) {
 		accs = append(accs, newAccount)
 	}
 	return accs, nil
+}
+
+func toAccountString(accounts []haveibeenbreached.Account) []string {
+	accs := make([]string, 0)
+	for _, a := range accounts {
+		accs = append(accs, a.Username.String())
+	}
+	return accs
 }
 
 func setAccountBreaches(accounts []haveibeenbreached.Account, breachName string) ([]haveibeenbreached.Account, error) {
