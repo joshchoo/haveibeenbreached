@@ -34,7 +34,7 @@ var r = haveibeenbreached.NewRepo(db)
 var sqsQueue = sqs.New(sess)
 var mq = haveibeenbreached.NewMessageQueue(sqsQueue)
 var notifyMeHandler = makeNotifyMeHandler(r, mq)
-var subscriptionsQueueName = os.Getenv("SUBSCRIPTIONS_QUEUE")
+var subscriptionsQueueURL = os.Getenv("SUBSCRIPTIONS_QUEUE_URL")
 
 func main() {
 	lambda.Start(notifyMeHandler)
@@ -50,7 +50,7 @@ func makeNotifyMeHandler(repo haveibeenbreached.Repo, queue haveibeenbreached.Me
 
 		err = queue.SendMessage(haveibeenbreached.SendMessageInput{
 			MessageBody: subscriber.Email,
-			QueueName:   subscriptionsQueueName,
+			QueueURL:    subscriptionsQueueURL,
 		})
 		if err != nil {
 			return Response{StatusCode: 400}, err
