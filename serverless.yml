@@ -53,6 +53,12 @@ functions:
       - httpApi:
           path: /api/v1/notifyMe
           method: post
+  notifySubscribersOfBreach:
+    handler: bin/notifySubscribersOfBreach
+    events:
+      - httpApi:
+          path: /api/v1/notifySubscribersOfBreach
+          method: post
   sendSubscriptionEmail:
     handler: bin/sendSubscriptionEmail
     events:
