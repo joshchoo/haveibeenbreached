@@ -66,10 +66,7 @@ functions:
     handler: bin/sendSubscriptionEmail
     events:
       - sqs:
-          arn:
-            Fn::GetAtt:
-              - subscriptionsQueue
-              - Arn
+          arn: !GetAtt subscriptionsQueue.Arn
 
 # CloudFormation resource templates
 resources:
