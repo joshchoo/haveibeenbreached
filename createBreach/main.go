@@ -44,11 +44,12 @@ func makeCreateBreachHandler(repo haveibeenbreached.Repo) func(ctx context.Conte
 		}
 
 		breach := haveibeenbreached.Breach{
-			BreachName:  event.BreachName,
-			Title:       event.Title,
-			Domain:      event.Domain,
-			Description: event.Description,
-			BreachDate:  breachDate,
+			BreachName:       event.BreachName,
+			Title:            event.Title,
+			Domain:           event.Domain,
+			Description:      event.Description,
+			BreachDate:       breachDate,
+			BreachedAccounts: make([]string, 0),
 		}
 
 		if err = repo.PutItem(breach); err != nil {
