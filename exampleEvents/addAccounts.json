@@ -1,0 +1,6 @@
+{
+    "pathParameters": {
+        "BreachName": "Adobe"
+    },
+    "Accounts": ["john@doe.com", "jane@cho.com", "bob@smith.info", "hello@email.net", "a@a.com"]
+}
