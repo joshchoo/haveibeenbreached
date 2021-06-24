@@ -18,13 +18,13 @@ provider:
       statements:
         - Effect: "Allow"
           Action:
-            - "dynamodb:ListTables"
             - "dynamodb:GetItem"
             - "dynamodb:PutItem"
-            - "sqs:ListQueues"
-            - "sqs:GetQueueUrl"
+          Resource: !GetAtt breachesTable.Arn
+        - Effect: "Allow"
+          Action:
             - "sqs:SendMessage"
-          Resource: "*"
+          Resource: !GetAtt subscriptionsQueue.Arn
 
 package:
   patterns:
