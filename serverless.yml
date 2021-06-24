@@ -8,6 +8,9 @@ provider:
   lambdaHashingVersion: 20201221
   region: ap-southeast-1
   stage: dev
+  environment:
+    BREACHES_TABLE: "Breaches"
+    SUBSCRIPTIONS_QUEUE: "subscriptions"
 
   # you can add statements to the Lambda function's IAM Role here
   iam:

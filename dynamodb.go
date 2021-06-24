@@ -1,12 +1,14 @@
 package haveibeenbreached
 
 import (
+	"os"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 )
 
-var tableName = "Breaches"
+var tableName = os.Getenv("BREACHES_TABLE")
 
 type DBItem interface {
 	isDBItem() bool

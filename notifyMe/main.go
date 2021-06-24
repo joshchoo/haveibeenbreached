@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -33,7 +34,7 @@ var r = haveibeenbreached.NewRepo(db)
 var sqsQueue = sqs.New(sess)
 var mq = haveibeenbreached.NewMessageQueue(sqsQueue)
 var notifyMeHandler = makeNotifyMeHandler(r, mq)
-var subscriptionsQueueName = "subscriptions"
+var subscriptionsQueueName = os.Getenv("SUBSCRIPTIONS_QUEUE")
 
 func main() {
 	lambda.Start(notifyMeHandler)
